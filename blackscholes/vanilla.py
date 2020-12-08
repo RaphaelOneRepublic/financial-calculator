@@ -25,7 +25,9 @@ class Vanilla(object):
     def __init__(self, S, K, r, T, sigma, direction='C', q=0.0):
         """
         construct a plain vanilla option object
-        :param S: currently prevailing sopt price of underlying
+
+
+        :param S: currently prevailing spot price of underlying
         :param K: strike price
         :param r: risk-free interest rate
         :param T: time to maturity
@@ -52,6 +54,8 @@ class Vanilla(object):
     def price(self):
         """
         compute the fair price of the option
+
+
         :return:
         """
         if self.direction == 'C' or self.direction == 'c' or self.direction == 'call':
@@ -64,6 +68,8 @@ class Vanilla(object):
     def delta(self):
         """
         compute the sensitivity of option price with regard to the underlying price
+
+
         :return:
         """
         if self.direction == 'C' or self.direction == 'c' or self.direction == 'call':
@@ -75,6 +81,8 @@ class Vanilla(object):
         """
         compute the sensitivity of option delta with regard to the underlying price,
         or the second derivative of option price with regard to underlying price
+
+
         :return:
         """
         return self.K * np.exp(-self.r * self.T) * norm.cdf(self.d2()) / \
@@ -83,6 +91,8 @@ class Vanilla(object):
     def vega(self):
         """
         compute the sensitivity of option price with regard to volatility
+
+
         :return:
         """
         return self.K * np.exp(-self.r * self.T) * norm.pdf(self.d2()) * np.sqrt(self.T)
@@ -91,6 +101,8 @@ class Vanilla(object):
         """
         the time decay
         compute the sensitivity of option price with regard to time to maturity
+
+
         :return:
         """
         if self.direction == 'C' or self.direction == 'c' or self.direction == 'call':
@@ -105,6 +117,8 @@ class Vanilla(object):
     def rho(self):
         """
         compute the sensitivity of option price with regard to risk-free interest rate
+
+
         :return:
         """
         if self.direction == 'C' or self.direction == 'c' or self.direction == 'call':
@@ -116,6 +130,8 @@ class Vanilla(object):
         """
         also called lambda / gearing
         compute the percentage change in option value per percentage change in underlying price
+
+
         :return:
         """
         return self.delta() * self.S / self.price()
@@ -124,6 +140,8 @@ class Vanilla(object):
         """
         compute the sensitivity of option delta with regard to sigma
         also the second order derivative of option price with regard to spot price and sigma
+
+
         :return:
         """
 
@@ -133,6 +151,15 @@ class Vanilla(object):
         raise NotImplementedError()
 
     def implied_volatility(self, market: float):
+        """
+        compute the implied volatility at the provided market price
+        This will put the computed volatility in place of the originally stored value
+
+
+        :param market: trending market price of option
+        :return:
+        """
+
         def target(x: float):
             self.sigma = x
             return self.price() - market
