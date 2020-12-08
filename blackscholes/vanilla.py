@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 from scipy.stats import norm
 
@@ -239,13 +241,14 @@ class Vanilla(object):
         return - self.vega() / (self.sigma ** 2) * \
                (self.d1() * self.d2() * (1 - self.d1() * self.d2()) + self.d1() ** 2 + self.d2() ** 2)
 
-    def implied_volatility(self, market: float):
+    def implied_volatility(self, market: float, method: str = 'newton', initial: float = 0.1):
         """
         compute the implied volatility at the provided market price
         This will put the computed volatility in place of the originally stored value
 
-
         :param market: trending market price of option
+        :param method: numerical method used to find the implied volatility
+        :param initial: hint for answer
         :return:
         """
 
@@ -257,14 +260,17 @@ class Vanilla(object):
             self.sigma = x
             return self.vega()
 
-        return numerical.newtons(target, derivative, 0.1)
+        method = method.strip().lower()
+        if method == 'newton':
+            return numerical.newtons(target, derivative, initial)
+        elif method == 'secant':
+            return numerical.secant(target, initial, initial + 0.01)
+        elif method == 'bisect':
+            warnings.warn("the bisection method converges slowly")
+            return numerical.bisect(target, 0.0001, initial)
+        else:
+            raise ValueError(f"unsupported numerical method {method}")
 
 
 if __name__ == '__main__':
-    option = Vanilla(100, 100, 0.05, 0.5, 0.1, 'C', q=0.1)
-    print(option.premium())
-    print(option.delta())
-    print(option.gamma())
-    print(option.vega())
-    print(option.theta())
-    print(option.rho())
+    print(Vanilla(100, 100, 0.05, 0.5, 0.3, q=0.01).implied_volatility(2.75, method='newton'))
