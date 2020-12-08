@@ -36,12 +36,16 @@ class Vanilla(object):
         :param q: continuously distributed dividend rate
         """
         self.q = q
-        self.direction = direction
         self.sigma = sigma
         self.T = T
         self.r = r
         self.K = K
         self.S = S
+        direction = direction.strip().capitalize()
+        if direction == 'C' or direction == "CALL":
+            self.direction = 'C'
+        elif direction == 'P' or direction == "PUT":
+            self.direction = 'P'
 
     def d1(self):
         return (np.log(self.S / self.K) + (self.r - self.q + 0.5 * self.sigma * self.sigma) * self.T) / \
@@ -51,17 +55,17 @@ class Vanilla(object):
         return (np.log(self.S / self.K) + (self.r - self.q - 0.5 * self.sigma * self.sigma) * self.T) / \
                (self.sigma * np.sqrt(self.T))
 
-    def price(self):
+    def premium(self):
         """
         compute the fair price of the option
 
 
         :return:
         """
-        if self.direction == 'C' or self.direction == 'c' or self.direction == 'call':
+        if self.direction == 'C':
             return self.S * np.exp(-self.q * self.T) * norm.cdf(self.d1()) \
                    - self.K * np.exp(-self.r * self.T) * norm.cdf(self.d2())
-        elif self.direction == 'P' or self.direction == 'p' or self.direction == 'put':
+        elif self.direction == 'P':
             return - self.S * np.exp(-self.q * self.T) * norm.cdf(-self.d1()) \
                    + self.K * np.exp(-self.r * self.T) * norm.cdf(-self.d2())
 
@@ -72,9 +76,9 @@ class Vanilla(object):
 
         :return:
         """
-        if self.direction == 'C' or self.direction == 'c' or self.direction == 'call':
+        if self.direction == 'C':
             return np.exp(-self.q * self.T) * norm.cdf(self.d1())
-        elif self.direction == 'P' or self.direction == 'p' or self.direction == 'put':
+        elif self.direction == 'P':
             return - np.exp(-self.q * self.T) * norm.cdf(-self.d1())
 
     def gamma(self):
@@ -105,11 +109,11 @@ class Vanilla(object):
 
         :return:
         """
-        if self.direction == 'C' or self.direction == 'c' or self.direction == 'call':
+        if self.direction == 'C':
             return - np.exp(-self.q * self.T) * (self.S * norm.pdf(self.d1()) * self.sigma) / (2 * np.sqrt(self.T)) \
                    - self.r * self.K * np.exp(-self.r * self.T) * norm.cdf(self.d2()) \
                    + self.q * self.S * np.exp(-self.q * self.T) * norm.cdf(self.d1())
-        elif self.direction == 'P' or self.direction == 'p' or self.direction == 'put':
+        elif self.direction == 'P':
             return - np.exp(-self.q * self.T) * (self.S * norm.pdf(-self.d1()) * self.sigma) / (2 * np.sqrt(self.T)) \
                    + self.r * self.K * np.exp(-self.r * self.T) * norm.cdf(-self.d2()) \
                    - self.q * self.S * np.exp(-self.q * self.T) * norm.cdf(-self.d1())
@@ -121,9 +125,9 @@ class Vanilla(object):
 
         :return:
         """
-        if self.direction == 'C' or self.direction == 'c' or self.direction == 'call':
+        if self.direction == 'C':
             return self.K * self.T * np.exp(-self.r * self.T) * norm.cdf(self.d2())
-        elif self.direction == 'P' or self.direction == 'p' or self.direction == 'put':
+        elif self.direction == 'P':
             return - self.K * self.T * np.exp(-self.r * self.T) * norm.cdf(-self.d2())
 
     def omega(self):
@@ -134,12 +138,12 @@ class Vanilla(object):
 
         :return:
         """
-        return self.delta() * self.S / self.price()
+        return self.delta() * self.S / self.premium()
 
     def vanna(self):
         """
         compute the sensitivity of option delta with regard to sigma
-        also the second order derivative of option price with regard to spot price and sigma
+        also the second order derivative of option price with regard to spot price and volatility
 
 
         :return:
@@ -148,7 +152,92 @@ class Vanilla(object):
         return self.vega() * (1 - self.d1() / (self.sigma * np.sqrt(self.T))) / self.S
 
     def charm(self):
-        raise NotImplementedError()
+        """
+        delta decay
+
+        compute the sensitivity of option delta with regard to time to maturity
+        also the second order derivative of option price with regard to spot price and time to maturity
+
+
+        :return:
+        """
+        residual = - np.exp(-self.q * self.T) * norm.pdf(self.d1()) \
+                   * (2 * (self.r - self.q) * self.T - self.d2() * self.sigma * np.sqrt(self.T)) / \
+                   (2 * self.T * self.sigma * np.sqrt(self.T))
+        if self.direction == 'C':
+            return self.q * np.exp(-self.q * self.T) * norm.cdf(self.d1()) + residual
+        elif self.direction == 'C':
+            return -self.q * np.exp(-self.q * self.T) * norm.cdf(-self.d1()) + residual
+
+    def vomma(self):
+        """
+        vega convexity
+
+        compute the sensitivity of vega with regard to volatility
+        also the second order derivative of option price with respect to volatility twice
+
+
+        :return:
+        """
+        return self.vega() * self.d1() * self.d2() / self.sigma
+
+    def veta(self):
+        """
+        compute the sensitivity of vega with regard to time to maturity
+        also the second order derivative of option price with respect to volatility and time to maturity
+
+
+        :return:
+        """
+        return - self.vega() * (self.q
+                                + ((self.r - self.q) * self.d1()) / (self.sigma * np.sqrt(self.T))
+                                - (1 + self.d1() * self.d2()) / (2 * self.T))
+
+    def speed(self):
+        """
+        compute sensitivity of gamma with respect to the underlying price
+        also the third order derivative of option price with respect to the underlying price thrice
+
+
+        :return:
+        """
+        return - self.gamma() / self.S * (self.d1() / (self.sigma * np.sqrt(self.T)) + 1)
+
+    def zomma(self):
+        """
+        compute the sensitivity of gamma with regard to volatility
+        also the third order derivative of option price with respect once to volatility and twice to underlying price
+
+
+       :return:
+        """
+        return self.gamma() * (self.d1() * self.d2() - 1) / self.sigma
+
+    def color(self):
+        """
+        gamma decay
+
+        compute the sensitivity of gamma with regard to time to maturity
+        also the third order derivative of option price with respect once to time and twice to underlying price
+
+
+        :return:
+        """
+        return - np.exp(-self.q * self.T) * norm.pdf(self.d1()) / (2 * self.S * self.T * self.sigma * np.sqrt(self.T)) \
+               * (2 * self.q * self.T + 1
+                  + (2 * (self.r - self.q) * self.T - self.d2() * self.sigma * np.sqrt(self.T))
+                  / (self.sigma * np.sqrt(self.T)) * self.d1())
+
+    def ultima(self):
+        """
+        compute the sensitivity of vomma with regard to volatility
+        also the third order derivative of option price with respect tp volatility thrice
+
+
+        :return:
+        """
+        return - self.vega() / (self.sigma ** 2) * \
+               (self.d1() * self.d2() * (1 - self.d1() * self.d2()) + self.d1() ** 2 + self.d2() ** 2)
 
     def implied_volatility(self, market: float):
         """
@@ -162,7 +251,7 @@ class Vanilla(object):
 
         def target(x: float):
             self.sigma = x
-            return self.price() - market
+            return self.premium() - market
 
         def derivative(x: float):
             self.sigma = x
@@ -172,4 +261,10 @@ class Vanilla(object):
 
 
 if __name__ == '__main__':
-    print(Vanilla(100, 100, 0.05, 0.5, 0, 'P', q=0.1).implied_volatility(market=9.396990676896607))
+    option = Vanilla(100, 100, 0.05, 0.5, 0.1, 'C', q=0.1)
+    print(option.premium())
+    print(option.delta())
+    print(option.gamma())
+    print(option.vega())
+    print(option.theta())
+    print(option.rho())
