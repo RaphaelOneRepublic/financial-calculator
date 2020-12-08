@@ -40,3 +40,6 @@ For call options
 # premium = S * e ** (-q * T) * N(d1) - K * e ** (-r * T) * N(d2) 
 ```
 
+## Bond Math
+Based on time to maturity, coupon period, coupon rate, and bond value to compute the bond yield to maturity, duration, and convexity 
+
