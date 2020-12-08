@@ -3,13 +3,14 @@ import warnings
 import numpy as np
 from scipy.stats import norm
 
-from blackscholes import numerical
+from calc import numerical
 
 
 class Vanilla(object):
     """
-    Class to represent a plain vanilla option
+    a plain vanilla European option
     """
+
     S: float  # spot price of the underlying
 
     K: float  # strike price of the option
@@ -241,7 +242,24 @@ class Vanilla(object):
         return - self.vega() / (self.sigma ** 2) * \
                (self.d1() * self.d2() * (1 - self.d1() * self.d2()) + self.d1() ** 2 + self.d2() ** 2)
 
-    def implied_volatility(self, market: float, method: str = 'newton', initial: float = 0.1):
+    def vera(self):
+        """
+        todo
+
+        :return:
+        """
+        raise NotImplementedError()
+
+    def totta(self):
+        """
+        todo
+
+        :return:
+        """
+        raise NotImplementedError()
+
+    def implied_volatility(self, market: float, method: str = 'newton', initial: float = 0.1, interval: [int] = None):
+
         """
         compute the implied volatility at the provided market price
         This will put the computed volatility in place of the originally stored value
@@ -249,6 +267,7 @@ class Vanilla(object):
         :param market: trending market price of option
         :param method: numerical method used to find the implied volatility
         :param initial: hint for answer
+        :param interval: used when using bisection method for determining initial search interval
         :return:
         """
 
@@ -261,16 +280,16 @@ class Vanilla(object):
             return self.vega()
 
         method = method.strip().lower()
+
         if method == 'newton':
             return numerical.newtons(target, derivative, initial)
         elif method == 'secant':
             return numerical.secant(target, initial, initial + 0.01)
         elif method == 'bisect':
-            warnings.warn("the bisection method converges slowly")
-            return numerical.bisect(target, 0.0001, initial)
+            return numerical.bisect(target, interval[0], interval[1])
+        elif method == "approx":
+            return np.sqrt(2 * np.pi) / (self.S * np.sqrt(self.T)) \
+                   * (market - 0.5 * (self.r - self.q) * self.T * self.S) \
+                   / (1 - 0.5 * (self.r + self.q) * self.T)
         else:
             raise ValueError(f"unsupported numerical method {method}")
-
-
-if __name__ == '__main__':
-    print(Vanilla(100, 100, 0.05, 0.5, 0.3, q=0.01).implied_volatility(2.75, method='newton'))

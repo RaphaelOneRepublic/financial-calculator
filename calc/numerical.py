@@ -1,5 +1,7 @@
-import numpy as np
 from typing import Callable
+import warnings
+
+import numpy as np
 
 
 def integral_with_simpsons(func: Callable,
@@ -14,9 +16,9 @@ def integral_with_simpsons(func: Callable,
     :param tolerance: maximum error value
     :return: calculated value of definite integral
     """
-    k = 8
-    i = _integral_with_simpsons_with_steps(func, begin, end, 4)
-    j = _integral_with_simpsons_with_steps(func, begin, end, 8)
+    k = 256
+    i = _integral_with_simpsons_with_steps(func, begin, end, 128)
+    j = _integral_with_simpsons_with_steps(func, begin, end, 256)
     while abs(i - j) > tolerance:
         k *= 2
         i = j
@@ -73,6 +75,7 @@ def bisect(func: Callable, begin, end, tolerance=10e-8, error=10e-6):
     :param error: maximum error in the function value
     :return:
     """
+    warnings.warn("the bisection method converges slowly")
     if func(begin) == 0: return begin
     if func(end) == 0: return end
     if func(begin) > 0 and func(end) > 0 or func(begin) < 0 and func(end) < 0:
