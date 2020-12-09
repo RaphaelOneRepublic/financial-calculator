@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 from calc.numerical import newtons
 
@@ -134,7 +136,10 @@ class Bond(object):
         def derivative(x):
             return self._dBdy
 
-        self.y = newtons(func, derivative, 0.1)
+        try:
+            self.y = newtons(func, derivative, 0.1)
+        except RuntimeError:
+            logging.error("invalid bond value")
 
     @property
     def F(self):

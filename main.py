@@ -6,3 +6,6 @@ if __name__ == '__main__':
     print(bond.ytm)
     print(bond.duration)
     print(bond.convexity)
+
+    option = Vanilla(100, 100, 1, 0.05, price=8)
+    print(option.implied)

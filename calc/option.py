@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 from scipy.stats import norm
 
@@ -158,7 +160,10 @@ class Vanilla(object):
         def derivative(x):
             return self.vega
 
-        self.sigma = newtons(func, derivative, 0.1)
+        try:
+            self.sigma = newtons(func, derivative, 0.1)
+        except RuntimeError:
+            logging.error("invalid option price ")
 
     @property
     def delta(self):
