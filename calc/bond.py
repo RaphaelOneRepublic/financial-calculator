@@ -1,72 +1,174 @@
 import numpy as np
-
-from calc.cashflow import Cashflow
+from calc.numerical import newtons
 
 
 class Bond(object):
     """
-    a coupon paying bond
+    Represents a coupon paying bond
+    Upon creation, the time to maturity, coupon periods per year, coupon rate must be provided
+    If yield to maturity is provided, bond value would be ignored.
+    If yield to maturity is provided, bond value would be used to compute the implied yield to maturity
+    Face value is assumed to be 100 if not provided
     """
-    T: float  # time to maturity
-    period: float  # coupon payment period in years
-    coupon: float  # coupon rate in percentage
-    F: float  # face value
-    B: float  # bond value
 
-    def __init__(self, T, period, coupon, B, F=100):
+    def __init__(self, T: float, m: int, R: float, y: float = None, F: float = 100, B: float = None):
         """
-        a coupon bond
-
-        :param T: time to maturity
-        :param period: coupon paying periods in years
-        :param coupon: annual coupon rate in percentage
-        :param (optional) F: face value, default to 100
+        construct a coupon paying bond
+        :param T: time to maturity in years
+        :param m: coupon payments per year
+        :param R: quoted annual coupon rate
+        :param y: (implied) yield to maturity
+        :param (optional) F: face value
+        :param B: traded bond price
         """
-        self.T = T
-        self.period = period
-        self.coupon = coupon
-        self.F = F
-        self.B = B
+        self._T = T
+        self._m = m
+        self._R = R
+        self._F = F
 
-        self.times = np.arange(self.T, 0, -self.period)[::-1]
-        self.cash = [self.coupon * self.F / 100 * self.period for _ in range(len(self.times))]
-        self.cash[-1] += self.F
+        if y is not None:
+            self._y = y
+            self.__refresh_value_cache__()
+        elif B is not None:
+            self.B = B
+        else:
+            raise ValueError("one of yield to maturity of bond price must be provided")
 
-    def yield_to_maturity(self):
+    def __refresh_value_cache__(self):
         """
-        compute the yield to maturity of the bond
-
+        recompute cached bond properties
         :return:
         """
-        return Cashflow(flow=self.cash, time=self.times, rate=0).internal_rate_of_return(pv=self.B)
+        self.__refresh_primary_cache__()
+        self._d2Bdy2 = np.sum(self._ts * self._ts * self._dcs)
+        self._duration = -self._dBdy / self._B
+        self._convexity = self._d2Bdy2 / self._B
 
-    def modified_duration(self):
+    def __refresh_primary_cache__(self):
         """
-        compute the modified duration of the bond
-        this is the same as the Macaulay duration assuming continuously compounded interest
-
-
+        recompute frequently accessed bond properties except for duration, convexity and second order derivative
         :return:
         """
-        return np.sum(- self.times * self.cash
-                      * np.exp(- self.times * np.array([self.yield_to_maturity()] * len(self.cash)))) / (-self.B)
+        self._ts = np.arange(self._T, 0, -1 / self._m)[::-1]
+        self._cs = [self._R * self._F / 100 / self._m for _ in range(len(self._ts))]
+        self._cs[-1] += self._F
+        self._dcs = np.exp(-self._y * self._ts) * self._cs
+        self._B = np.sum(self._dcs)
+        self._dBdy = np.sum(-self._ts * self._dcs)
 
-    def macaulay_duration(self):
+    @property
+    def T(self):
         """
-        compute the macaulay duration of the bond
-        this is the same as the modified duration assuming continuously compounded interest
-
-
+        time to maturity
         :return:
         """
-        return np.sum(self.cash * np.exp(- self.times * self.yield_to_maturity()) / self.B * self.times)
+        return self._T
 
+    @T.setter
+    def T(self, value):
+        self._T = value
+        self.__refresh_value_cache__()
+
+    @property
+    def m(self):
+        """
+        coupon payments per year
+        :return:
+        """
+        return self._m
+
+    @m.setter
+    def m(self, value):
+        self._m = value
+        self.__refresh_value_cache__()
+
+    @property
+    def R(self):
+        """
+        coupon rate
+        :return:
+        """
+        return self._R
+
+    @R.setter
+    def R(self, value):
+        self._R = value
+        self.__refresh_value_cache__()
+
+    @property
+    def y(self):
+        """
+        yield to maturity
+        :return:
+        """
+        return self._y
+
+    @property
+    def ytm(self):
+        """
+        yield to maturity
+        :return:
+        """
+        return self._y
+
+    @y.setter
+    def y(self, value):
+        self._y = value
+        self.__refresh_value_cache__()
+
+    @property
+    def B(self):
+        """
+        bond value
+        :return:
+        """
+        return self._B
+
+    @B.setter
+    def B(self, value):
+        def func(x):
+            self._y = x
+            self.__refresh_primary_cache__()
+            return self._B - value
+
+        def derivative(x):
+            return self._dBdy
+
+        self.y = newtons(func, derivative, 0.1)
+
+    @property
+    def F(self):
+        """
+        face value
+        :return:
+        """
+        return self._F
+
+    @F.setter
+    def F(self, value):
+        self._F = value
+        self.__refresh_value_cache__()
+
+    @property
+    def duration(self):
+        """
+        modified duration of the bond
+        :return:
+        """
+        return self._duration
+
+    @property
     def convexity(self):
         """
-        compute the convexity of the bond
-
-
+        :convexity of the bond
         :return:
         """
-        return np.sum(self.times * self.times * self.cash * np.exp(
-            - self.times * np.array([self.yield_to_maturity()] * len(self.cash)))) / self.B
+        return self._convexity
+
+
+if __name__ == '__main__':
+    bond = Bond(3, 2, 4, B=101)
+    print(bond.ytm)
+    print(bond.duration)
+    print(bond.convexity)
+    Bond()
