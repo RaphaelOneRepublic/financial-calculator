@@ -164,11 +164,3 @@ class Bond(object):
         :return:
         """
         return self._convexity
-
-
-if __name__ == '__main__':
-    bond = Bond(3, 2, 4, B=101)
-    print(bond.ytm)
-    print(bond.duration)
-    print(bond.convexity)
-    Bond()
