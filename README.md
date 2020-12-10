@@ -1,4 +1,4 @@
-# financial-calculator
+# Numerical Finance Stuff
 
 Inspired by the Advanced Calculus for Financial Engineering Applications seminar at Baruch College but more.
 
@@ -8,7 +8,6 @@ Inspired by the Advanced Calculus for Financial Engineering Applications seminar
 ### Optimization
 1. Newton's method
 2. Secant method
-3. Bisection method (converges slowly)
 
 ## Encapsulation of Plain Vanilla European Options
 Using Black-Scholes model to evaluate the following for plain vanilla European options.
@@ -39,7 +38,49 @@ For call options
 # European call options using Black-Scholes formula
 # premium = S * e ** (-q * T) * N(d1) - K * e ** (-r * T) * N(d2) 
 ```
-
+### Example
+```python
+from calc.option import Vanilla
+# compute the implied volatility of a plain vanilla ATM put option
+# struck at $100, expiring in 6 months, with risk-free rate being 5% and traded at $5
+option = Vanilla(100, 100, 0.5, 0.05,put=True, price=5)
+print(option.implied)
+# and compute its theta and gamma
+print(option.theta, option.gamma)
+```
 ## Bond Math
-Based on time to maturity, coupon period, coupon rate, and bond value to compute the bond yield to maturity, duration, and convexity 
+### Yield to Maturity and Bond Value
+Yield to maturity can be calculated from traded price, and vice versa.
+### Modified Duration, Convexity
+In the continuous case, Macaulay duration is the same as modified duration and therefore not implemented.
+Same for convexity
+### Bootstrapping for Finding Zero Rate Curves
+Linear interpolation assumed.
+
+*TODO*: Smooth the curve (equalizing derivatives of curves at each point)
+
+### Example
+```python
+from calc.bond import Bond, bootstrap
+# compute the value of a semiannual coupon bond expiring in 4 years 
+# with coupon rate 4% with yield to maturity 0.4
+bond = Bond(4, 4, y=0.4)
+print(bond.B)
+# compute the yield to maturity of a semiannual coupon bond expiring in 4 years 
+# with coupon rate 4% with value 101
+bond.B = 101
+print(bond.ytm)
+# compute the above bond's duration and convexity
+print(bond.duration, bond.convexity)
+
+# bootstrap zero rate curves using four semiannual coupon bonds
+# with 4% coupon rate and expiring in 6 months, 1, 2, and 5 years respectively
+bonds = [
+    Bond(0.5, 0, B=99),
+    Bond(1, 4, B=102),
+    Bond(2, 4, B=103.5),
+    Bond(5, 4, B=109)
+]
+print(bootstrap(bonds))
+```
 
