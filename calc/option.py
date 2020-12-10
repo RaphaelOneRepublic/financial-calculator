@@ -19,6 +19,7 @@ class Vanilla(object):
                  put: bool = False, price: float = None):
         """
         construct a plain vanilla European option
+
         :param S: underlying spot price
         :param K: strike price
         :param T: time to maturity
@@ -46,6 +47,7 @@ class Vanilla(object):
     def __refresh_value_cache__(self):
         """
         recompute frequently accessed cache values
+
         :return:
         """
         # black scholes coefficients
@@ -161,7 +163,8 @@ class Vanilla(object):
             return self.vega
 
         try:
-            self.sigma = root(f, 0.1, df)
+            # compute implied volatility with initial guess = 0.25
+            self.sigma = root(f, 0.25, df)
         except RuntimeError:
             logging.error("invalid option price ")
 
@@ -169,6 +172,7 @@ class Vanilla(object):
     def delta(self):
         """
         first order derivative of option value with respect to underlying spot price
+
         :return:
         """
         if not self._put:
@@ -180,6 +184,7 @@ class Vanilla(object):
     def vega(self):
         """
         first order derivative of option value with respect to implied volatility
+
         :return:
         """
         return self._pvs * self._rootT * self._nd1
@@ -188,6 +193,7 @@ class Vanilla(object):
     def gamma(self):
         """
         second order derivative of option value twice with respect to underlying spot price
+
         :return:
         """
         return self._expnqt / self._S / self._sigma / self._rootT * self._nd1
@@ -196,6 +202,7 @@ class Vanilla(object):
     def theta(self):
         """
         first order derivative of option value with respect to time to maturity
+
         :return:
         """
         if not self._put:
@@ -211,6 +218,7 @@ class Vanilla(object):
     def rho(self):
         """
         first order derivative of option value with respect to risk-free interest rate
+
         :return:
         """
         if not self._put:

@@ -1,5 +1,10 @@
-from calc.option import Vanilla
+from calc.bond import Bond, bootstrap
 
 if __name__ == '__main__':
-    option = Vanilla(100, 100, 0.5, 0.05, q=0.01, price=0.1)
-    print(option.implied)
+    bonds = [
+        Bond(0.5, 0, B=99),
+        Bond(1, 4, B=102),
+        Bond(2, 4, B=103.5),
+        Bond(5, 4, B=109)
+    ]
+    print(bootstrap(bonds))

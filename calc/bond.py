@@ -1,4 +1,5 @@
 import logging
+from typing import Sequence
 
 import numpy as np
 
@@ -14,9 +15,10 @@ class Bond(object):
     Face value is assumed to be 100 if not provided
     """
 
-    def __init__(self, T: float, m: int, R: float, y: float = None, F: float = 100, B: float = None):
+    def __init__(self, T: float, R: float, m: int = 2, y: float = None, F: float = 100, B: float = None):
         """
         construct a coupon paying bond
+
         :param T: time to maturity in years
         :param m: coupon payments per year
         :param R: quoted annual coupon rate
@@ -35,11 +37,12 @@ class Bond(object):
         elif B is not None:
             self.B = B
         else:
-            raise ValueError("one of yield to maturity of bond price must be provided")
+            raise ValueError("one of yield to maturity or bond price must be provided")
 
     def __refresh_value_cache__(self):
         """
         recompute cached bond properties
+
         :return:
         """
         self.__refresh_primary_cache__()
@@ -50,6 +53,7 @@ class Bond(object):
     def __refresh_primary_cache__(self):
         """
         recompute frequently accessed bond properties except for duration, convexity and second order derivative
+
         :return:
         """
         self._ts = np.arange(self._T, 0, -1 / self._m)[::-1]
@@ -63,6 +67,7 @@ class Bond(object):
     def T(self):
         """
         time to maturity
+
         :return:
         """
         return self._T
@@ -76,6 +81,7 @@ class Bond(object):
     def m(self):
         """
         coupon payments per year
+
         :return:
         """
         return self._m
@@ -89,6 +95,7 @@ class Bond(object):
     def R(self):
         """
         coupon rate
+
         :return:
         """
         return self._R
@@ -102,6 +109,7 @@ class Bond(object):
     def y(self):
         """
         yield to maturity
+
         :return:
         """
         return self._y
@@ -110,6 +118,7 @@ class Bond(object):
     def ytm(self):
         """
         yield to maturity
+
         :return:
         """
         return self._y
@@ -123,6 +132,7 @@ class Bond(object):
     def B(self):
         """
         bond value
+
         :return:
         """
         return self._B
@@ -138,6 +148,7 @@ class Bond(object):
             return self._dBdy
 
         try:
+            # compute implied yield to maturity with initial guess = 0.1
             self.y = root(f, 0.1, df)
         except RuntimeError:
             logging.error("invalid bond value")
@@ -146,6 +157,7 @@ class Bond(object):
     def F(self):
         """
         face value
+
         :return:
         """
         return self._F
@@ -159,6 +171,7 @@ class Bond(object):
     def duration(self):
         """
         modified duration of the bond
+
         :return:
         """
         return self._duration
@@ -167,6 +180,57 @@ class Bond(object):
     def convexity(self):
         """
         :convexity of the bond
+
         :return:
         """
         return self._convexity
+
+    def curve(self, known: Sequence[float] = None) -> np.ndarray:
+        """
+        Compute the unknown zero rate assuming rate is a linear function of time
+        with the first few items given.
+        The given vector corresponds to the first few zero rates at each coupon payment and can be nonlinear
+        The last known zero rate and the furthest computed zero rate uniquely characterize the computed zero rate curve
+
+        :param known:
+        :return:
+        """
+        if known is None or len(known) == 0:
+            return np.array([self.ytm])
+        known = np.array(known)
+        t = np.arange(self._T, 0, -1 / self._m)[::-1]
+        c = [self._R * self._F / 100 / self._m for _ in range(len(t))]
+        c[-1] += self._F
+        t0, t1 = t[:len(known)], t[len(known):]
+        c0, c1 = c[:len(known)], c[len(known):]
+
+        def f(x: float):
+            # noinspection PyShadowingNames
+            rx = np.linspace(x, known[-1], len(t1), endpoint=False)[::-1]
+            return np.sum(c0 * np.exp(-t0 * known)) + np.sum(c1 * np.exp(-t1 * rx)) - self._B
+
+        def df(x: float):
+            # noinspection PyShadowingNames
+            rx = np.linspace(x, known[-1], len(t1), endpoint=False)[::-1]
+            return float(np.sum(-t1 * np.arange(1, len(t1) + 1) / len(t1) * c1 * np.exp(-t1 * rx)))
+
+        x = root(f, 0.1, df=df)
+        rx = np.linspace(x, known[-1], len(t1), endpoint=False)[::-1]
+        return np.concatenate([known, rx])
+
+
+def bootstrap(bonds: Sequence[Bond]):
+    """
+    Bootstrap a zero rate curve from the given bonds and bond values
+    Note that the bonds must have equal coupon payment periods (equal <m>s).
+    Zero rates at times for which we do not have a bond are calculated
+    by a linear line connecting the two nearest rates at times for which we do have a bond
+
+    :param bonds:
+    :return:
+    """
+    sorted(bonds, key=lambda x: x.T)
+    known = []
+    for bond in bonds:
+        known = bond.curve(known)
+    return known

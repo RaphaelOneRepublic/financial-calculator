@@ -19,6 +19,7 @@ def root(f: Callable[[float], float], x0: float, df: Callable[[float], float] = 
     :return: a root
     """
     if df is None:
+        # secant method
         if xn1 is None:
             xn1 = x0 + 0.1
         new, old = x0, xn1
@@ -28,6 +29,7 @@ def root(f: Callable[[float], float], x0: float, df: Callable[[float], float] = 
             new = old - f(old) * (old - oldest) / (f(old) - f(oldest))
             stop -= 1
     else:
+        # newton method
         new, old = x0, x0 + 1
         while (abs(f(new) > epsilon) or abs(new - old) > delta) and stop > 0:
             old = new
