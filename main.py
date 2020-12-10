@@ -1,11 +1,5 @@
-from calc.bond import Bond
 from calc.option import Vanilla
 
 if __name__ == '__main__':
-    bond = Bond(3, 2, 4, B=101)
-    print(bond.ytm)
-    print(bond.duration)
-    print(bond.convexity)
-
-    option = Vanilla(100, 100, 1, 0.05, price=8)
+    option = Vanilla(100, 100, 0.5, 0.05, q=0.01, price=0.1)
     print(option.implied)

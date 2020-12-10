@@ -3,7 +3,7 @@ import logging
 import numpy as np
 from scipy.stats import norm
 
-from calc.numerical import newtons
+from calc.optimize import root
 
 
 class Vanilla(object):
@@ -35,11 +35,11 @@ class Vanilla(object):
         self._q = q
         self._put = put
 
-        if sigma is not None:
+        if sigma is not None:  # use sigma to compute premium
             self._sigma = sigma
             self.__refresh_value_cache__()
         elif price is not None:
-            self.premium = price  # computes implied volatility
+            self.premium = price  # use premium to compute implied volatility
         else:
             raise ValueError("one of implied volatility or traded price must be present")
 
@@ -152,16 +152,16 @@ class Vanilla(object):
 
     @premium.setter
     def premium(self, value):
-        def func(x):
+        def f(x):
             self._sigma = x
             self.__refresh_value_cache__()
             return self.premium - value
 
-        def derivative(x):
+        def df(x):
             return self.vega
 
         try:
-            self.sigma = newtons(func, derivative, 0.1)
+            self.sigma = root(f, 0.1, df)
         except RuntimeError:
             logging.error("invalid option price ")
 

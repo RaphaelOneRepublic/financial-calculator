@@ -1,7 +1,8 @@
 import logging
 
 import numpy as np
-from calc.numerical import newtons
+
+from calc.optimize import root
 
 
 class Bond(object):
@@ -56,7 +57,7 @@ class Bond(object):
         self._cs[-1] += self._F
         self._dcs = np.exp(-self._y * self._ts) * self._cs
         self._B = np.sum(self._dcs)
-        self._dBdy = np.sum(-self._ts * self._dcs)
+        self._dBdy = float(np.sum(-self._ts * self._dcs))
 
     @property
     def T(self):
@@ -128,16 +129,16 @@ class Bond(object):
 
     @B.setter
     def B(self, value):
-        def func(x):
+        def f(x):
             self._y = x
             self.__refresh_primary_cache__()
             return self._B - value
 
-        def derivative(x):
+        def df(x: float):
             return self._dBdy
 
         try:
-            self.y = newtons(func, derivative, 0.1)
+            self.y = root(f, 0.1, df)
         except RuntimeError:
             logging.error("invalid bond value")
 
