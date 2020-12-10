@@ -2,6 +2,9 @@
 
 Inspired by the Advanced Calculus for Financial Engineering Applications seminar at Baruch College but more.
 
+
+**Huge TODO**: C++ implementations (for practice and carpe diem (et noctem)) but no promise
+
 ## Numerical Implementations of Several Dull Routines
 ### Integration
 1. Simpson's for Numerical Integration
@@ -88,6 +91,8 @@ print(bootstrap(bonds))
 
 ## TIme Value of Money
 Compute the present value / future value of a set of cash flows
+
 Convert between different compound periods
+
 Level-payment of fully amortized mortgage
 
