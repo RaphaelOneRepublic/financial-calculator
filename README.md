@@ -54,6 +54,8 @@ Yield to maturity can be calculated from traded price, and vice versa.
 ### Modified Duration, Convexity
 In the continuous case, Macaulay duration is the same as modified duration and therefore not implemented.
 Same for convexity
+### Yields for Discount Bond
+Current yield, bank-equivalent yield, and CD-equivalent yield
 ### Bootstrapping for Finding Zero Rate Curves
 Linear interpolation assumed.
 
@@ -83,4 +85,9 @@ bonds = [
 ]
 print(bootstrap(bonds))
 ```
+
+## TIme Value of Money
+Compute the present value / future value of a set of cash flows
+Convert between different compound periods
+Level-payment of fully amortized mortgage
 
