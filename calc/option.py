@@ -10,9 +10,9 @@ class Vanilla(object):
     """
     Represents a plain vanilla European option, either e a call or a put.
     Upon creation, the underlying spot price, the strike price, the risk-free interest rate ust be provided.
-    A put can be specified by setting the indicating boolean value to True,
-    The volatility can be provided as <sigma>, which will shadow the argument <price>
-    If <sigma> is not provided, <price> must be provided in its place, where the volatility is implied
+    A put can be specified by setting the indicating boolean value to True.
+    The volatility can be provided as <sigma>, which will shadow the argument <price>.
+    If <sigma> is not provided, <price> must be provided in its place, where the volatility is implied.
     """
 
     def __init__(self, S: float, K: float, T: float, r: float, sigma: float = None, q: float = 0,

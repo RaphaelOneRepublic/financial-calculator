@@ -8,11 +8,11 @@ from calc.optimize import root
 
 class Bond(object):
     """
-    Represents a coupon paying bond
-    Upon creation, the time to maturity, coupon periods per year, coupon rate must be provided
+    Represents a coupon paying bond.
+    Upon creation, the time to maturity, coupon periods per year, coupon rate must be provided.
     If yield to maturity is provided, bond value would be ignored.
-    If yield to maturity is provided, bond value would be used to compute the implied yield to maturity
-    Face value is assumed to be 100 if not provided
+    If yield to maturity is provided, bond value would be used to compute the implied yield to maturity.
+    Face value is assumed to be 100 if not provided.
     """
 
     def __init__(self, T: float, R: float, m: int = 2, y: float = None, F: float = 100, B: float = None):
@@ -41,7 +41,7 @@ class Bond(object):
 
     def __refresh_value_cache__(self):
         """
-        recompute cached bond properties
+        recompute cached bond properties.
 
         :return:
         """
@@ -52,7 +52,7 @@ class Bond(object):
 
     def __refresh_primary_cache__(self):
         """
-        recompute frequently accessed bond properties except for duration, convexity and second order derivative
+        recompute frequently accessed bond properties except for duration, convexity and second order derivative.
 
         :return:
         """
@@ -123,6 +123,38 @@ class Bond(object):
         """
         return self._y
 
+    @property
+    def current(self):
+        """
+        the current yield of the bond
+        = annual interest payment / bond price
+
+        :return:
+        """
+        return self._R / 100 * self._F / self._B
+
+    @property
+    def bankeq(self):
+        """
+        the bank equivalent yield of the bond
+        = (par - value) / par * 360 / days to maturity
+
+        :return:
+        """
+        assert self._R == 0
+        return (self._F - self._B) / self._F * 360 / (self._T * 365)
+
+    @property
+    def cdeq(self):
+        """
+        the money market equivalent yield of the bond
+        = (par - value) / value * 360 / days to maturity
+
+        :return:
+        """
+        assert self._R == 0
+        return (self._F - self._B) / self._B * 360 / (self._T * 365)
+
     @y.setter
     def y(self, value):
         self._y = value
@@ -189,8 +221,8 @@ class Bond(object):
         """
         Compute the unknown zero rate assuming rate is a linear function of time
         with the first few items given.
-        The given vector corresponds to the first few zero rates at each coupon payment and can be nonlinear
-        The last known zero rate and the furthest computed zero rate uniquely characterize the computed zero rate curve
+        The given vector corresponds to the first few zero rates at each coupon payment and can be nonlinear.
+        The last known zero rate and the furthest computed zero rate uniquely characterize the computed zero rate curve.
 
         :param known:
         :return:
@@ -221,10 +253,10 @@ class Bond(object):
 
 def bootstrap(bonds: Sequence[Bond]):
     """
-    Bootstrap a zero rate curve from the given bonds and bond values
+    Bootstrap a zero rate curve from the given bonds and bond values.
     Note that the bonds must have equal coupon payment periods (equal <m>s).
     Zero rates at times for which we do not have a bond are calculated
-    by a linear line connecting the two nearest rates at times for which we do have a bond
+    by a linear line connecting the two nearest rates at times for which we do have a bond.
 
     :param bonds:
     :return:
