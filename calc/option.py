@@ -83,6 +83,8 @@ class Vanilla(object):
 
     @S.setter
     def S(self, value):
+        if self._S == value:
+            return
         self._S = value
         self.__refresh_value_cache__()
 
@@ -92,6 +94,8 @@ class Vanilla(object):
 
     @K.setter
     def K(self, value):
+        if self._K == value:
+            return
         self._K = value
         self.__refresh_value_cache__()
 
@@ -101,6 +105,8 @@ class Vanilla(object):
 
     @T.setter
     def T(self, value):
+        if self._T == value:
+            return
         self._T = value
         self.__refresh_value_cache__()
 
@@ -110,6 +116,8 @@ class Vanilla(object):
 
     @r.setter
     def r(self, value):
+        if self._r == value:
+            return
         self._r = value
         self.__refresh_value_cache__()
 
@@ -123,6 +131,8 @@ class Vanilla(object):
 
     @sigma.setter
     def sigma(self, value):
+        if self._sigma == value:
+            return
         self._sigma = value
         self.__refresh_value_cache__()
 
@@ -132,6 +142,8 @@ class Vanilla(object):
 
     @q.setter
     def q(self, value):
+        if self._q == value:
+            return
         self._q = value
         self.__refresh_value_cache__()
 
@@ -164,7 +176,7 @@ class Vanilla(object):
 
         try:
             # compute implied volatility with initial guess = 0.25
-            self.sigma = root(f, 0.25, df)
+            self.sigma = root(f, 0.5, epsilon=10e-6, delta=10e-6, progress=False)
         except RuntimeError:
             logging.error("invalid option price ")
 
@@ -226,4 +238,12 @@ class Vanilla(object):
         else:
             return -self._T * self._pvk * self._Nnd2
 
-    # TODO Other Greeks
+    @property
+    def charm(self):
+        tmp = - self._expnqt * self._nd1 * (
+                2 * (self._r - self._q) * self._T - self._d2 * self._sigma * self._rootT) / (
+                      2 * self._T * self._sigma * self._rootT)
+        if not self._put:
+            return tmp + self._q * self._expnqt * self._Nd1
+        else:
+            return tmp - self._q * self._expnqt * self._Nnd1

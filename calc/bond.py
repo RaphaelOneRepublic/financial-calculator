@@ -60,6 +60,7 @@ class Bond(object):
         self._cs = [self._R * self._F / 100 / self._m for _ in range(len(self._ts))]
         self._cs[-1] += self._F
         self._dcs = np.exp(-self._y * self._ts) * self._cs
+
         self._B = np.sum(self._dcs)
         self._dBdy = float(np.sum(-self._ts * self._dcs))
 
@@ -217,13 +218,14 @@ class Bond(object):
         """
         return self._convexity
 
-    def curve(self, known: Sequence[float] = None) -> np.ndarray:
+    def curve(self, known: Sequence[float] = None, epsilon: float = 10e-9) -> np.ndarray:
         """
         Compute the unknown zero rate assuming rate is a linear function of time
         with the first few items given.
         The given vector corresponds to the first few zero rates at each coupon payment and can be nonlinear.
         The last known zero rate and the furthest computed zero rate uniquely characterize the computed zero rate curve.
 
+        :param epsilon:
         :param known:
         :return:
         """
@@ -246,23 +248,25 @@ class Bond(object):
             rx = np.linspace(x, known[-1], len(t1), endpoint=False)[::-1]
             return float(np.sum(-t1 * np.arange(1, len(t1) + 1) / len(t1) * c1 * np.exp(-t1 * rx)))
 
-        x = root(f, 0.1, df=df)
+        x = root(f, 0.05, df=df, epsilon=epsilon)
+
         rx = np.linspace(x, known[-1], len(t1), endpoint=False)[::-1]
         return np.concatenate([known, rx])
 
 
-def bootstrap(bonds: Sequence[Bond]):
+def bootstrap(bonds: Sequence[Bond], epsilon: float = 10e-9):
     """
     Bootstrap a zero rate curve from the given bonds and bond values.
     Note that the bonds must have equal coupon payment periods (equal <m>s).
     Zero rates at times for which we do not have a bond are calculated
     by a linear line connecting the two nearest rates at times for which we do have a bond.
 
+    :param epsilon:
     :param bonds:
     :return:
     """
-    sorted(bonds, key=lambda x: x.T)
+    bonds = sorted(bonds, key=lambda x: x.T)
     known = []
     for bond in bonds:
-        known = bond.curve(known)
+        known = bond.curve(known, epsilon=epsilon)
     return known
