@@ -39,12 +39,12 @@ def root(f: Callable[[float], float], x0: float, df: Callable[[float], float] = 
         new, old = x0, x0 + 1
         fx, dfx = f(new), df(new)
         while (abs(fx > epsilon) or abs(new - old) > delta) and stop > 0:
-            if progress:
-                print(new)
             old = new
             new = old - fx / dfx
             fx, dfx = f(new), df(new)
             stop -= 1
+            if progress:
+                print(new)
     return new
 
 

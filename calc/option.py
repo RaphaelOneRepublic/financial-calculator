@@ -176,7 +176,7 @@ class Vanilla(object):
 
         try:
             # compute implied volatility with initial guess = 0.25
-            self.sigma = root(f, 0.5, epsilon=10e-6, delta=10e-6, progress=False)
+            self.sigma = root(f, 0.2, epsilon=10e-8, delta=10e-8, progress=True)
         except RuntimeError:
             logging.error("invalid option price ")
 
@@ -247,3 +247,13 @@ class Vanilla(object):
             return tmp + self._q * self._expnqt * self._Nd1
         else:
             return tmp - self._q * self._expnqt * self._Nnd1
+
+    @property
+    def dVdK(self):
+        """
+        not an actual greek :)
+
+        :return:
+        """
+        return self._expnrt * self._Nnd2 + self._pvk * self._nd2 / self.K / self.sigma / self._rootT \
+               - self._pvs * self._nd1 / self.K / self.sigma / self._rootT

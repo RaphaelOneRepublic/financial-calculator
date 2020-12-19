@@ -182,7 +182,7 @@ class Bond(object):
 
         try:
             # compute implied yield to maturity with initial guess = 0.1
-            self.y = root(f, 0.1, df)
+            self.y = root(f, 0.1, df, epsilon=10e-9, delta=10e-9)
         except RuntimeError:
             logging.error("invalid bond value")
 
@@ -218,55 +218,43 @@ class Bond(object):
         """
         return self._convexity
 
-    def curve(self, known: Sequence[float] = None, epsilon: float = 10e-9) -> np.ndarray:
-        """
-        Compute the unknown zero rate assuming rate is a linear function of time
-        with the first few items given.
-        The given vector corresponds to the first few zero rates at each coupon payment and can be nonlinear.
-        The last known zero rate and the furthest computed zero rate uniquely characterize the computed zero rate curve.
 
-        :param epsilon:
-        :param known:
-        :return:
-        """
-        if known is None or len(known) == 0:
-            return np.array([self.ytm])
-        known = np.array(known)
-        t = np.arange(self._T, 0, -1 / self._m)[::-1]
-        c = [self._R * self._F / 100 / self._m for _ in range(len(t))]
-        c[-1] += self._F
-        t0, t1 = t[:len(known)], t[len(known):]
-        c0, c1 = c[:len(known)], c[len(known):]
+def find_curve(bond, known: np.array, epsilon: float = 10e-10):
+    t = np.arange(bond.T, 0, - 1. / bond.m)[::-1]
+    c = np.array([bond.R / bond.m] * len(t))
+    c[-1] += bond.F
 
-        def f(x: float):
-            # noinspection PyShadowingNames
-            rx = np.linspace(x, known[-1], len(t1), endpoint=False)[::-1]
-            return np.sum(c0 * np.exp(-t0 * known)) + np.sum(c1 * np.exp(-t1 * rx)) - self._B
+    def f(x: float) -> float:
+        r = np.linspace(x, known[-1], len(t) + 1 - len(known), endpoint=False)[::-1]
+        rr = np.concatenate([known[1:], r])
+        return float(np.sum(c * np.exp(-rr * t))) - bond.B
 
-        def df(x: float):
-            # noinspection PyShadowingNames
-            rx = np.linspace(x, known[-1], len(t1), endpoint=False)[::-1]
-            return float(np.sum(-t1 * np.arange(1, len(t1) + 1) / len(t1) * c1 * np.exp(-t1 * rx)))
+    def df(x: float) -> float:
+        r = np.linspace(x, known[-1], len(t) + 1 - len(known), endpoint=False)[::-1]
+        cc = c[len(known) - 1:]
+        tt = t[len(known) - 1:]
+        return float(np.sum(-cc * tt * np.exp(-r * tt) * np.arange(1, len(tt) + 1) / len(tt)))
 
-        x = root(f, 0.05, df=df, epsilon=epsilon)
-
-        rx = np.linspace(x, known[-1], len(t1), endpoint=False)[::-1]
-        return np.concatenate([known, rx])
+    x = root(f, 0.05, df=df)
+    r = np.linspace(x, known[-1], len(t) + 1 - len(known), endpoint=False)[::-1]
+    rr = np.concatenate([known[:], r])
+    return rr
 
 
-def bootstrap(bonds: Sequence[Bond], epsilon: float = 10e-9):
+def bootstrap(bonds: Sequence[Bond], overnight: float, epsilon: float = 10e-10):
     """
     Bootstrap a zero rate curve from the given bonds and bond values.
     Note that the bonds must have equal coupon payment periods (equal <m>s).
     Zero rates at times for which we do not have a bond are calculated
     by a linear line connecting the two nearest rates at times for which we do have a bond.
 
+    :param overnight:
     :param epsilon:
     :param bonds:
     :return:
     """
     bonds = sorted(bonds, key=lambda x: x.T)
-    known = []
+    known = [overnight]
     for bond in bonds:
-        known = bond.curve(known, epsilon=epsilon)
+        known = find_curve(bond, known)
     return known
